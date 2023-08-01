@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import * as sdk from 'matrix-js-sdk';
 import Olm from '@matrix-org/olm';
-// import { logger } from 'matrix-js-sdk/lib/logger';
+//import { logger } from 'matrix-js-sdk/lib/logger';
 
 import { secret } from './state/auth';
 import RoomList from './state/RoomList';
@@ -45,9 +45,7 @@ class InitMatrix extends EventEmitter {
       deviceId: secret.deviceId,
       timelineSupport: true,
       cryptoCallbacks,
-      verificationMethods: [
-        'm.sas.v1',
-      ],
+      verificationMethods: ['m.sas.v1'],
     });
 
     await this.matrixClient.initCrypto();

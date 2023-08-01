@@ -1,3 +1,4 @@
+import { logger } from 'matrix-js-sdk/lib/logger';
 import React, { useEffect, useRef } from 'react';
 
 import cons from '../../../client/state/cons';
@@ -5,52 +6,49 @@ import navigation from '../../../client/state/navigation';
 import settings from '../../../client/state/settings';
 
 import ContextMenu from '../../atoms/context-menu/ContextMenu';
-import EmojiBoard from './EmojiBoard';
+import GifExplorer from './GifExplorer';
 
 let requestCallback = null;
-let isEmojiBoardVisible = false;
-function EmojiBoardOpener() {
+let isGifExplorerVisible = false;
+
+function GifExplorerOpener() {
   const openerRef = useRef(null);
   const searchRef = useRef(null);
-
-  function openEmojiBoard(cords, requestEmojiCallback) {
-    if (requestCallback !== null || isEmojiBoardVisible) {
+  function openGifExplorer(cords) {
+    logger.info('Opening gif explorer');
+    if (requestCallback !== null || isGifExplorerVisible) {
       requestCallback = null;
       if (cords.detail === 0) openerRef.current.click();
       return;
     }
 
     openerRef.current.style.transform = `translate(${cords.x}px, ${cords.y}px)`;
-    requestCallback = requestEmojiCallback;
     openerRef.current.click();
   }
 
-  function afterEmojiBoardToggle(isVisible) {
-    isEmojiBoardVisible = isVisible;
+  function afterGifExplorerToggle(isVisible) {
+    isGifExplorerVisible = isVisible;
+    /*
     if (isVisible) {
       if (!settings.isTouchScreenDevice) searchRef.current.focus();
     } else {
       setTimeout(() => {
-        if (!isEmojiBoardVisible) requestCallback = null;
+        if (!isGifExplorerVisible) requestCallback = null;
       }, 500);
-    }
-  }
-
-  function addEmoji(emoji) {
-    requestCallback(emoji);
+    } */
   }
 
   useEffect(() => {
-    navigation.on(cons.events.navigation.EMOJIBOARD_OPENED, openEmojiBoard);
+    navigation.on(cons.events.navigation.GIFEXPLORER_OPENED, openGifExplorer);
     return () => {
-      navigation.removeListener(cons.events.navigation.EMOJIBOARD_OPENED, openEmojiBoard);
+      navigation.removeListener(cons.events.navigation.GIFEXPLORER_OPENED, openGifExplorer);
     };
   }, []);
 
   return (
     <ContextMenu
-      content={<EmojiBoard onSelect={addEmoji} searchRef={searchRef} />}
-      afterToggle={afterEmojiBoardToggle}
+      content={<GifExplorer searchRef={searchRef} />}
+      afterToggle={afterGifExplorerToggle}
       render={(toggleMenu) => (
         <input
           ref={openerRef}
@@ -73,4 +71,4 @@ function EmojiBoardOpener() {
   );
 }
 
-export default EmojiBoardOpener;
+export default GifExplorerOpener;

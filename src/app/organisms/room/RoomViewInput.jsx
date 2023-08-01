@@ -1,3 +1,5 @@
+import { logger } from 'matrix-js-sdk/lib/logger';
+
 /* eslint-disable react/prop-types */
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
@@ -8,7 +10,11 @@ import TextareaAutosize from 'react-autosize-textarea';
 import initMatrix from '../../../client/initMatrix';
 import cons from '../../../client/state/cons';
 import settings from '../../../client/state/settings';
-import { openEmojiBoard, openReusableContextMenu } from '../../../client/action/navigation';
+import {
+  openEmojiBoard,
+  openGifExplorer,
+  openReusableContextMenu,
+} from '../../../client/action/navigation';
 import navigation from '../../../client/state/navigation';
 import { bytesToSize, getEventCords } from '../../../util/common';
 import { getUsername } from '../../../util/matrixUtil';
@@ -25,6 +31,7 @@ import { confirmDialog } from '../../molecules/confirm-dialog/ConfirmDialog';
 
 import CirclePlusIC from '../../../../public/res/ic/outlined/circle-plus.svg';
 import EmojiIC from '../../../../public/res/ic/outlined/emoji.svg';
+import GifIC from '../../../../public/res/ic/outlined/GIF.svg';
 import SendIC from '../../../../public/res/ic/outlined/send.svg';
 import StickerIC from '../../../../public/res/ic/outlined/sticker.svg';
 import ShieldIC from '../../../../public/res/ic/outlined/shield.svg';
@@ -39,9 +46,7 @@ const CMD_REGEX = /(^\/|:|@)(\S*)$/;
 let isTyping = false;
 let isCmdActivated = false;
 let cmdCursorPos = null;
-function RoomViewInput({
-  roomId, roomTimeline, viewEvent,
-}) {
+function RoomViewInput({ roomId, roomTimeline, viewEvent }) {
   const [attachment, setAttachment] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
 
@@ -83,7 +88,9 @@ function RoomViewInput({
   function uploadingProgress(myRoomId, { loaded, total }) {
     if (myRoomId !== roomId) return;
     const progressPer = Math.round((loaded * 100) / total);
-    uploadProgressRef.current.textContent = `Uploading: ${bytesToSize(loaded)}/${bytesToSize(total)} (${progressPer}%)`;
+    uploadProgressRef.current.textContent = `Uploading: ${bytesToSize(loaded)}/${bytesToSize(
+      total
+    )} (${progressPer}%)`;
     inputBaseRef.current.style.backgroundImage = `linear-gradient(90deg, var(--bg-surface-hover) ${progressPer}%, var(--bg-surface-low) ${progressPer}%)`;
   }
   function clearAttachment(myRoomId) {
@@ -133,7 +140,7 @@ function RoomViewInput({
     textAreaRef.current.value = replaceCmdWith(
       msg,
       cmdCursorPos,
-      typeof cmdData?.replace !== 'undefined' ? cmdData.replace : '',
+      typeof cmdData?.replace !== 'undefined' ? cmdData.replace : ''
     );
     deactivateCmd();
   }
@@ -146,7 +153,10 @@ function RoomViewInput({
   function setUpReply(userId, eventId, body, formattedBody) {
     setReplyTo({ userId, eventId, body });
     roomsInput.setReplyTo(roomId, {
-      userId, eventId, body, formattedBody,
+      userId,
+      eventId,
+      body,
+      formattedBody,
     });
     focusInput();
   }
@@ -351,19 +361,31 @@ function RoomViewInput({
     if (!canISend || tombstoneEvent) {
       return (
         <Text className="room-input__alert">
-          {
-            tombstoneEvent
-              ? tombstoneEvent.getContent()?.body ?? 'This room has been replaced and is no longer active.'
-              : 'You do not have permission to post to this room'
-          }
+          {tombstoneEvent
+            ? tombstoneEvent.getContent()?.body ??
+              'This room has been replaced and is no longer active.'
+            : 'You do not have permission to post to this room'}
         </Text>
       );
     }
     return (
       <>
-        <div className={`room-input__option-container${attachment === null ? '' : ' room-attachment__option'}`}>
-          <input onChange={uploadFileChange} style={{ display: 'none' }} ref={uploadInputRef} type="file" />
-          <IconButton onClick={handleUploadClick} tooltip={attachment === null ? 'Upload' : 'Cancel'} src={CirclePlusIC} />
+        <div
+          className={`room-input__option-container${
+            attachment === null ? '' : ' room-attachment__option'
+          }`}
+        >
+          <input
+            onChange={uploadFileChange}
+            style={{ display: 'none' }}
+            ref={uploadInputRef}
+            type="file"
+          />
+          <IconButton
+            onClick={handleUploadClick}
+            tooltip={attachment === null ? 'Upload' : 'Cancel'}
+            src={CirclePlusIC}
+          />
         </div>
         <div ref={inputBaseRef} className="room-input__input-container">
           {roomTimeline.isEncrypted() && <RawIcon size="extra-small" src={ShieldIC} />}
@@ -384,6 +406,16 @@ function RoomViewInput({
         <div ref={rightOptionsRef} className="room-input__option-container">
           <IconButton
             onClick={(e) => {
+              const cords = getEventCords(e);
+              cords.x += document.dir === 'rtl' ? -80 : 80;
+              cords.y -= 250;
+              openGifExplorer(cords);
+            }}
+            tooltip="GIF"
+            src={GifIC}
+          />
+          <IconButton
+            onClick={(e) => {
               openReusableContextMenu(
                 'top',
                 (() => {
@@ -399,7 +431,7 @@ function RoomViewInput({
                       closeMenu();
                     }}
                   />
-                ),
+                )
               );
             }}
             tooltip="Sticker"
@@ -408,7 +440,7 @@ function RoomViewInput({
           <IconButton
             onClick={(e) => {
               const cords = getEventCords(e);
-              cords.x += (document.dir === 'rtl' ? -80 : 80);
+              cords.x += document.dir === 'rtl' ? -80 : 80;
               cords.y -= 250;
               openEmojiBoard(cords, addEmoji);
             }}
@@ -425,15 +457,25 @@ function RoomViewInput({
     const fileType = attachment.type.slice(0, attachment.type.indexOf('/'));
     return (
       <div className="room-attachment">
-        <div className={`room-attachment__preview${fileType !== 'image' ? ' room-attachment__icon' : ''}`}>
-          {fileType === 'image' && <img alt={attachment.name} src={URL.createObjectURL(attachment)} />}
+        <div
+          className={`room-attachment__preview${
+            fileType !== 'image' ? ' room-attachment__icon' : ''
+          }`}
+        >
+          {fileType === 'image' && (
+            <img alt={attachment.name} src={URL.createObjectURL(attachment)} />
+          )}
           {fileType === 'video' && <RawIcon src={VLCIC} />}
           {fileType === 'audio' && <RawIcon src={VolumeFullIC} />}
-          {fileType !== 'image' && fileType !== 'video' && fileType !== 'audio' && <RawIcon src={FileIC} />}
+          {fileType !== 'image' && fileType !== 'video' && fileType !== 'audio' && (
+            <RawIcon src={FileIC} />
+          )}
         </div>
         <div className="room-attachment__info">
           <Text variant="b1">{attachment.name}</Text>
-          <Text variant="b3"><span ref={uploadProgressRef}>{`size: ${bytesToSize(attachment.size)}`}</span></Text>
+          <Text variant="b3">
+            <span ref={uploadProgressRef}>{`size: ${bytesToSize(attachment.size)}`}</span>
+          </Text>
         </div>
       </div>
     );
@@ -464,12 +506,15 @@ function RoomViewInput({
 
   return (
     <>
-      { replyTo !== null && attachReply()}
-      { attachment !== null && attachFile() }
-      <form className="room-input" onSubmit={(e) => { e.preventDefault(); }}>
-        {
-          renderInputs()
-        }
+      {replyTo !== null && attachReply()}
+      {attachment !== null && attachFile()}
+      <form
+        className="room-input"
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
+        {renderInputs()}
       </form>
     </>
   );

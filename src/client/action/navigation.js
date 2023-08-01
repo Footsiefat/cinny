@@ -1,3 +1,4 @@
+import { logger } from 'matrix-js-sdk/lib/logger';
 import appDispatcher from '../dispatcher';
 import cons from '../state/cons';
 
@@ -121,6 +122,13 @@ export function openEmojiBoard(cords, requestEmojiCallback) {
     type: cons.actions.navigation.OPEN_EMOJIBOARD,
     cords,
     requestEmojiCallback,
+  });
+}
+
+export function openGifExplorer(cords) {
+  appDispatcher.dispatch({
+    type: cons.actions.navigation.OPEN_GIFEXPLORER,
+    cords,
   });
 }
 
